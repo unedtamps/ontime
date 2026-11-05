@@ -1,159 +1,57 @@
-# Turborepo starter
+# Ontime
 
-This Turborepo starter is maintained by the Turborepo core team.
+Employee attendance for a company. Employees check in with a camera photo and GPS location; masters manage staff and monitor attendance.
 
-## Using this example
-
-Run the following command:
+## Run it
 
 ```sh
-npx create-turbo@latest
+cp .env.example .env
+docker compose up -d
+npm install
+npm run dev
 ```
 
-## What's inside?
+Web: http://localhost:3000 — master signs in with `master@ontime.local` / `MasterPass1`.
 
-This Turborepo includes the following packages/apps:
+## Architecture
 
-### Apps and Packages
+![Ontime service and Kafka topology](./docs/architecture.png)
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `@next/eslint-plugin-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+Solid lines are HTTP requests; dashed lines are data and events.
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+## API documentation
 
-### Utilities
+Every client-facing endpoint, with request bodies and success responses: [Ontime API on Postman](https://documenter.getpostman.com/view/26492730/2sBYHYswmb)
 
-This Turborepo has some additional tools already setup for you:
+## Services & ports
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+| Service | Port | What it does |
+| --- | --- | --- |
+| `web` | 3000 | Next.js client |
+| `api-gateway` | 3001 | Session auth, routing, role checks |
+| `identity` | 3002 | Users, roles, passwords |
+| `attendence` | 3004 | Check-in / check-out, photo proof |
+| `notification` | 3005 | Kafka consumer, sends emails |
 
-### Build
+## Infrastructure ports
 
-To build all apps and packages, run the following command:
+| Component | Port |
+| --- | --- |
+| `kafka-1` / `kafka-2` / `kafka-3` | 9092 / 9094 / 9096 |
+| `kafka-ui` | 8080 |
+| `db-identity` | 1521 |
+| `db-attendence` | 1523 |
+| `maildev` SMTP / UI | 1025 / 1080 |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+Kafka topics: `identity.events`, `attendence.events` — 4 partitions, replication factor 3.
 
-```sh
-cd my-turborepo
-turbo build
-```
+## Stack
 
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo build
-npm exec turbo build
-npm exec turbo build
-```
-
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo build --filter=docs
-npm exec turbo build --filter=docs
-npm exec turbo build --filter=docs
-```
-
-### Develop
-
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo dev
-npm exec turbo dev
-npm exec turbo dev
-```
-
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo dev --filter=web
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo dev --filter=web
-npm exec turbo dev --filter=web
-npm exec turbo dev --filter=web
-```
-
-### Remote Caching
-
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
-```
-
-Without global `turbo`, use your package manager:
-
-```sh
-cd my-turborepo
-npx turbo login
-npm exec turbo login
-npm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-npm exec turbo link
-npm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+- **Language**: TypeScript
+- **Monorepo**: Turborepo, npm workspaces
+- **Backend**: NestJS 12, TypeORM, Oracle Database 23ai Free, Kafka (kafkajs), sharp
+- **Frontend**: Next.js 16, React 19, Tailwind CSS v4, shadcn/ui + Fluid Functionalism
+- **Auth**: in-memory sessions in the gateway, bcryptjs password hashing
+- **Email**: nodemailer to MailDev
+- **Tests**: Vitest
+- **Lint / format**: oxlint, Prettier
