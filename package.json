@@ -25,5 +25,8 @@
   "workspaces": [
     "apps/*",
     "packages/*"
-  ]
+  ],
+  "allowScripts": {
+    "oracledb@7.0.1": true
+  }
 }
