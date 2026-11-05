@@ -1,102 +1,127 @@
-import Image, { type ImageProps } from "next/image";
-import { Button } from "@repo/ui/button";
-import styles from "./page.module.css";
+"use client";
 
-type Props = Omit<ImageProps, "src"> & {
-  srcLight: string;
-  srcDark: string;
-};
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { LogOut, KeyRound } from "lucide-react";
+import { api, type SessionUser } from "@/lib/api";
+import { MasterDashboard } from "@/components/master-dashboard";
+import { EmployeeDashboard } from "@/components/employee-dashboard";
+import { ChangePasswordDialog } from "@/components/change-password-dialog";
 
-const ThemeImage = (props: Props) => {
-  const { srcLight, srcDark, ...rest } = props;
-
-  return (
-    <>
-      <Image {...rest} src={srcLight} className="imgLight" />
-      <Image {...rest} src={srcDark} className="imgDark" />
-    </>
-  );
-};
+type Gate = "loading" | "anon" | SessionUser;
 
 export default function Home() {
-  return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <ThemeImage
-          className={styles.logo}
-          srcLight="turborepo-dark.svg"
-          srcDark="turborepo-light.svg"
-          alt="Turborepo logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol>
-          <li>
-            Get started by editing <code>apps/web/app/page.tsx</code>
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const router = useRouter();
+  const [gate, setGate] = useState<Gate>("loading");
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new/clone?demo-description=Learn+to+implement+a+monorepo+with+a+two+Next.js+sites+that+has+installed+three+local+packages.&demo-image=%2F%2Fimages.ctfassets.net%2Fe5382hct74si%2F4K8ZISWAzJ8X1504ca0zmC%2F0b21a1c6246add355e55816278ef54bc%2FBasic.png&demo-title=Monorepo+with+Turborepo&demo-url=https%3A%2F%2Fexamples-basic-web.vercel.sh%2F&from=templates&project-name=Monorepo+with+Turborepo&repository-name=monorepo-turborepo&repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fturborepo%2Ftree%2Fmain%2Fexamples%2Fbasic&root-directory=apps%2Fdocs&skippable-integrations=1&teamSlug=vercel&utm_source=create-turbo"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            href="https://turborepo.dev/docs?utm_source"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={styles.secondary}
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    api
+      .get<SessionUser>("/auth/me")
+      .then((user) => setGate(user))
+      .catch(() => {
+        setGate("anon");
+        router.replace("/login");
+      });
+  }, [router]);
+
+  async function signOut() {
+    setSigningOut(true);
+    try {
+      await api.post("/auth/logout");
+      router.replace("/login");
+    } finally {
+      setSigningOut(false);
+      setConfirmSignOut(false);
+    }
+  }
+
+  return (
+    <div className="min-h-dvh bg-background text-foreground">
+      <header className="mx-auto flex w-full max-w-[1600px] items-center justify-between gap-3 px-4 py-4 sm:px-6 sm:py-5">
+        <div className="flex min-w-0 items-baseline gap-2 sm:gap-3">
+          <span className="shrink-0 text-title font-semibold">Ontime</span>
+          <span className="hidden truncate text-caption text-muted-foreground sm:inline">
+            Employee attendance
+          </span>
         </div>
-        <Button appName="web" className={styles.secondary}>
-          Open alert
-        </Button>
+        {gate !== "loading" && gate !== "anon" && (
+          <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-3">
+            <span className="hidden max-w-[12ch] truncate text-subtitle text-muted-foreground sm:inline">
+              {gate.fullName}
+            </span>
+            <Badge variant="dot" color="gray" className="hidden sm:inline-flex">
+              {gate.role === "MASTER" ? "Master" : "Employee"}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="compact"
+              leadingIcon={KeyRound}
+              aria-label="Change password"
+              onClick={() => setPasswordOpen(true)}
+            >
+              <span className="hidden sm:inline">Password</span>
+            </Button>
+            <Button
+              variant="ghost"
+              size="compact"
+              leadingIcon={LogOut}
+              aria-label="Sign out"
+              onClick={() => setConfirmSignOut(true)}
+            >
+              <span className="hidden sm:inline">Sign out</span>
+            </Button>
+          </div>
+        )}
+      </header>
+      <main className="mx-auto w-full max-w-[1600px] px-4 pb-10 sm:px-6 sm:pb-12">
+        {gate === "loading" ? (
+          <div className="flex flex-col gap-4 pt-4">
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        ) : gate === "anon" ? null : gate.role === "MASTER" ? (
+          <MasterDashboard />
+        ) : (
+          <EmployeeDashboard user={gate} />
+        )}
       </main>
-      <footer className={styles.footer}>
-        <a
-          href="https://vercel.com/templates?search=turborepo&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          href="https://turborepo.dev?utm_source=create-turbo"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to turborepo.dev →
-        </a>
-      </footer>
+
+      <ChangePasswordDialog open={passwordOpen} onOpenChange={setPasswordOpen} />
+
+      <Dialog open={confirmSignOut} onOpenChange={setConfirmSignOut}>
+        <DialogContent size="sm">
+          <DialogHeader>
+            <DialogTitle>Sign out?</DialogTitle>
+            <DialogDescription>
+              {gate !== "loading" && gate !== "anon"
+                ? `You are signed in as ${gate.fullName}. You can sign back in anytime.`
+                : "You can sign back in anytime."}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setConfirmSignOut(false)}>
+              Cancel
+            </Button>
+            <Button variant="primary" loading={signingOut} onClick={signOut}>
+              Sign out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
