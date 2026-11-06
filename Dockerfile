@@ -78,6 +78,11 @@ EXPOSE 3001
 CMD ["node", "apps/api-gateway/dist/main.js"]
 
 FROM nest-runtime AS attendence
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fontconfig fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+USER node
 COPY --from=prod-deps-attendence --chown=node:node /app/node_modules ./node_modules
 COPY --from=build-attendence --chown=node:node /app/apps/attendence/package.json ./apps/attendence/package.json
 COPY --from=build-attendence --chown=node:node /app/apps/attendence/dist ./apps/attendence/dist
