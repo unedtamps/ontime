@@ -24,6 +24,7 @@ const ATTENDANCE_RULES: ProxyRule[] = [
   { method: 'POST', pattern: /^\/attendance$/, roles: ['EMPLOYEE'] },
   { method: 'GET', pattern: /^\/attendance$/, roles: ['MASTER'] },
   { method: 'GET', pattern: /^\/attendance\/me$/, roles: ['EMPLOYEE'] },
+  { method: 'GET', pattern: /^\/attendance\/today$/, roles: ['EMPLOYEE', 'MASTER'] },
   { method: 'PATCH', pattern: /^\/attendance\/\d+\/description$/, roles: ['EMPLOYEE'] },
   { method: 'PATCH', pattern: /^\/attendance\/\d+\/checkout$/, roles: ['EMPLOYEE'] },
   { method: 'GET', pattern: /^\/attendance\/photo\/\d+$/, roles: ['EMPLOYEE', 'MASTER'] },

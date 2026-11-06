@@ -18,6 +18,7 @@ import { CurrentUser, type GatewayUser } from '../guards/current-user.decorator.
 import { GatewayHeadersGuard, Roles } from '../guards/gateway-headers.guard.js';
 import { AttendanceService } from './attendance.service.js';
 import { CheckInDto, UpdateDescriptionDto } from './dto.js';
+import { todayWorkDate } from './time.js';
 import { UploadDirService } from './upload-dir.service.js';
 
 @Controller()
@@ -74,6 +75,12 @@ export class AttendanceController {
   @Roles('EMPLOYEE')
   listMine(@CurrentUser() user: GatewayUser) {
     return this.attendance.listMine(user.userId);
+  }
+
+  @Get('attendance/today')
+  @Roles('EMPLOYEE', 'MASTER')
+  today() {
+    return { workDate: todayWorkDate() };
   }
 
   @Get('attendance/photo/:id')

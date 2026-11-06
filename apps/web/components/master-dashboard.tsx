@@ -42,13 +42,6 @@ const emptyForm: EmployeeForm = {
   position: "",
 };
 
-function localToday(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
-
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], {
     hour: "2-digit",
@@ -73,13 +66,16 @@ function fmtDateTime(iso: string): string {
 
 type AttendanceStatus = "checked_out" | "on_duty" | "incomplete";
 
-function statusOf(record: AttendanceRecord): AttendanceStatus {
+function statusOf(
+  record: AttendanceRecord,
+  today: string | null,
+): AttendanceStatus {
   if (record.checkOutAt) return "checked_out";
-  return record.workDate === localToday() ? "on_duty" : "incomplete";
+  return record.workDate === today ? "on_duty" : "incomplete";
 }
 
-function isIncomplete(record: AttendanceRecord): boolean {
-  return statusOf(record) === "incomplete";
+function isIncomplete(record: AttendanceRecord, today: string | null): boolean {
+  return statusOf(record, today) === "incomplete";
 }
 
 function parseISODate(value: string): Date {
@@ -104,11 +100,10 @@ const SECTIONS: { id: Section; label: string; icon: typeof Users }[] = [
 export function MasterDashboard() {
   const [employees, setEmployees] = useState<EmployeeRecord[] | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRecord[] | null>(null);
+  const [today, setToday] = useState<string | null>(null);
   const [section, setSection] = useState<Section>("employees");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
-  const [absenceDate, setAbsenceDate] = useState<Date | undefined>(() =>
-    parseISODate(localToday()),
-  );
+  const [absenceDate, setAbsenceDate] = useState<Date | undefined>(undefined);
   const [onlyIncomplete, setOnlyIncomplete] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<EmployeeRecord | null>(null);
@@ -120,17 +115,23 @@ export function MasterDashboard() {
   const [photoRecord, setPhotoRecord] = useState<AttendanceRecord | null>(null);
 
   const load = useCallback(async () => {
-    const [users, records] = await Promise.all([
+    const [users, records, day] = await Promise.all([
       api.get<EmployeeRecord[]>("/users"),
       api.get<AttendanceRecord[]>("/attendance"),
+      api.get<{ workDate: string }>("/attendance/today"),
     ]);
     setEmployees(users);
     setAttendance(records);
+    setToday(day.workDate);
   }, []);
 
   useEffect(() => {
     load().catch(() => setEmployees([]));
   }, [load]);
+
+  useEffect(() => {
+    if (today) setAbsenceDate((current) => current ?? parseISODate(today));
+  }, [today]);
 
   const staff = useMemo(
     () => (employees ?? []).filter((e) => e.role === "EMPLOYEE"),
@@ -143,7 +144,9 @@ export function MasterDashboard() {
     return map;
   }, [employees]);
 
-  const absenceDateISO = absenceDate ? toISODate(absenceDate) : localToday();
+  const absenceDateISO = absenceDate
+    ? toISODate(absenceDate)
+    : (today ?? "");
 
   const filteredAttendance = useMemo(() => {
     if (!attendance) return null;
@@ -152,22 +155,21 @@ export function MasterDashboard() {
       const iso = toISODate(dateFilter);
       rows = rows.filter((r) => r.workDate === iso);
     }
-    if (onlyIncomplete) rows = rows.filter((r) => isIncomplete(r));
+    if (onlyIncomplete) rows = rows.filter((r) => isIncomplete(r, today));
     return rows;
-  }, [attendance, dateFilter, onlyIncomplete]);
+  }, [attendance, dateFilter, onlyIncomplete, today]);
 
   const presentToday = useMemo(
-    () =>
-      (attendance ?? []).filter((r) => r.workDate === localToday()).length,
-    [attendance],
+    () => (attendance ?? []).filter((r) => r.workDate === today).length,
+    [attendance, today],
   );
 
   const stillOnDuty = useMemo(
     () =>
       (attendance ?? []).filter(
-        (r) => r.workDate === localToday() && !r.checkOutAt,
+        (r) => r.workDate === today && !r.checkOutAt,
       ).length,
-    [attendance],
+    [attendance, today],
   );
 
   const absentOn = useMemo(() => {
@@ -182,11 +184,11 @@ export function MasterDashboard() {
   const absentTodayCount = useMemo(() => {
     const presentIds = new Set(
       (attendance ?? [])
-        .filter((r) => r.workDate === localToday())
+        .filter((r) => r.workDate === today)
         .map((r) => r.userId),
     );
     return staff.filter((e) => !presentIds.has(e.id)).length;
-  }, [attendance, staff]);
+  }, [attendance, staff, today]);
 
   function openCreate() {
     setEditing(null);
@@ -471,16 +473,16 @@ export function MasterDashboard() {
                         <Badge
                           variant="dot"
                           color={
-                            statusOf(record) === "checked_out"
+                            statusOf(record, today) === "checked_out"
                               ? "gray"
-                              : statusOf(record) === "on_duty"
+                              : statusOf(record, today) === "on_duty"
                                 ? "green"
                                 : "amber"
                           }
                         >
-                          {statusOf(record) === "checked_out"
+                          {statusOf(record, today) === "checked_out"
                             ? "Checked out"
-                            : statusOf(record) === "on_duty"
+                            : statusOf(record, today) === "on_duty"
                               ? "On duty"
                               : "No check-out"}
                         </Badge>

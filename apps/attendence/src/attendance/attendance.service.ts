@@ -18,7 +18,8 @@ import {
 } from '@repo/types';
 import { KafkaProducerService } from '../kafka/producer.service.js';
 import { AttendanceEntity } from './attendance.entity.js';
-import { todayWorkDate, UploadDirService } from './upload-dir.service.js';
+import { todayWorkDate } from './time.js';
+import { UploadDirService } from './upload-dir.service.js';
 import { WatermarkService } from './watermark.service.js';
 
 const IDENTITY_URL = process.env.IDENTITY_SERVICE_URL ?? 'http://localhost:3002';
