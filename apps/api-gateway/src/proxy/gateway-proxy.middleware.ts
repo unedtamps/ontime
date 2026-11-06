@@ -10,7 +10,7 @@ export interface ProxyRule {
 }
 
 const IDENTITY_TARGET = process.env.IDENTITY_SERVICE_URL ?? 'http://localhost:3002';
-const ATTENDENCE_TARGET = process.env.ATTENDENCE_SERVICE_URL ?? 'http://localhost:3004';
+const ATTENDENCE_TARGET = process.env.ATTENDENCE_SERVICE_URL ?? 'http://localhost:3003';
 
 const USER_RULES: ProxyRule[] = [
   { method: 'GET', pattern: /^\/users$/, roles: ['MASTER'] },

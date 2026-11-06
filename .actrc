@@ -1,0 +1,6 @@
+--platform=ubuntu-latest=ghcr.io/catthehacker/ubuntu:act-latest
+--container-architecture=linux/amd64
+--defaultbranch=master
+--concurrent-jobs=1
+--pull=false
+--var-file=.github/act/vars

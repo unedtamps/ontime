@@ -30,8 +30,8 @@ Every client-facing endpoint, with request bodies and success responses: [Ontime
 | `web` | 3000 | Next.js client |
 | `api-gateway` | 3001 | Session auth, routing, role checks |
 | `identity` | 3002 | Users, roles, passwords |
-| `attendence` | 3004 | Check-in / check-out, photo proof |
-| `notification` | 3005 | Kafka consumer, sends emails |
+| `attendence` | 3003 | Check-in / check-out, photo proof |
+| `notification` | 3004 | Kafka consumer, sends emails |
 
 ## Infrastructure ports
 

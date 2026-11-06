@@ -1,0 +1,15 @@
+{
+  "pull_request": {
+    "number": 1,
+    "head": {
+      "ref": "act-test"
+    },
+    "base": {
+      "ref": "master"
+    }
+  },
+  "repository": {
+    "default_branch": "master",
+    "full_name": "unedtamps/ontime"
+  }
+}
