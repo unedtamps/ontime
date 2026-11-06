@@ -1,0 +1,77 @@
+name: Deploy dev overlay
+
+on:
+  workflow_run:
+    workflows: ["Build and publish Docker images"]
+    types: [completed]
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-dev-overlay
+  cancel-in-progress: true
+
+jobs:
+  bump-kube-tags:
+    name: Bump dev image tags in kube config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event.workflow_run.conclusion == 'success'
+    env:
+      NS: ${{ secrets.DOCKERHUB_USERNAME }}
+    steps:
+      - name: Resolve image tag
+        id: tag
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+        run: echo "tag=sha-${SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Check out kube config repository
+        uses: actions/checkout@v7
+        with:
+          repository: unedtamps/aws
+          ref: master
+          token: ${{ secrets.KUBE_CONFIG_TOKEN }}
+          path: kube-config
+
+      - name: Pin overlay images to the new tag
+        working-directory: kube-config/aws_kube/k8s/apps/ontime/overlays/dev
+        run: |
+          if [ -z "$NS" ]; then
+            echo "DOCKERHUB_USERNAME is not set"
+            exit 1
+          fi
+          kustomize edit set image \
+            "$NS/ontime-api-gateway=$NS/ontime-api-gateway:${{ steps.tag.outputs.tag }}" \
+            "$NS/ontime-attendence=$NS/ontime-attendence:${{ steps.tag.outputs.tag }}" \
+            "$NS/ontime-identity=$NS/ontime-identity:${{ steps.tag.outputs.tag }}" \
+            "$NS/ontime-notification=$NS/ontime-notification:${{ steps.tag.outputs.tag }}" \
+            "$NS/ontime-web=$NS/ontime-web:${{ steps.tag.outputs.tag }}"
+          if grep -q 'newTag: latest' kustomization.yaml; then
+            echo "overlay still references latest — image names did not match"
+            cat kustomization.yaml
+            exit 1
+          fi
+
+      - name: Show resulting overlay
+        working-directory: kube-config/aws_kube/k8s/apps/ontime/overlays/dev
+        run: cat kustomization.yaml
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.KUBE_CONFIG_TOKEN }}
+          path: kube-config
+          base: master
+          branch: ontime-dev-${{ steps.tag.outputs.tag }}
+          delete-branch: true
+          commit-message: "chore(ontime): bump dev images to ${{ steps.tag.outputs.tag }}"
+          title: "Deploy ontime dev — ${{ steps.tag.outputs.tag }}"
+          body: |
+            All five dev images are built and pushed from
+            [${{ github.event.workflow_run.repository.full_name }}@${{ steps.tag.outputs.tag }}](${{ github.event.workflow_run.repository.html_url }}/commit/${{ github.event.workflow_run.head_sha }}).
+
+            This moves the `ontime-dev` overlay images from `latest` to `${{ steps.tag.outputs.tag }}`.
+            Merging lets the ArgoCD `ontime-dev` app sync the new rollout.

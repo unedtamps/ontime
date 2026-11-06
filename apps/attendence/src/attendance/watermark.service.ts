@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import sharp from 'sharp';
+import { formatStamp } from './time.js';
 
 export interface WatermarkInput {
   fullName: string;
@@ -16,16 +17,6 @@ function escapeXml(value: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
-function formatStamp(date: Date): string {
-  const day = `${pad(date.getDate())} ${date.toLocaleString('en-US', { month: 'short' })} ${date.getFullYear()}`;
-  const time = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-  return `${day} - ${time}`;
 }
 
 function formatCoords(input: WatermarkInput): string {

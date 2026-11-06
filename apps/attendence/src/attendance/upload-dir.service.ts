@@ -13,13 +13,6 @@ export function extForMime(mimetype: string): string {
   return EXT_BY_MIME[mimetype] ?? '.bin';
 }
 
-export function todayWorkDate(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${now.getFullYear()}-${month}-${day}`;
-}
-
 @Injectable()
 export class UploadDirService implements OnModuleInit {
   readonly dir: string;

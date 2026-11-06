@@ -26,13 +26,6 @@ const MAX_ACCURACY_METERS = 100;
 import { Pencil, CheckCircle2, LogOut, MapPin } from "lucide-react";
 import { api, type AttendanceRecord, type SessionUser } from "@/lib/api";
 
-function localToday(): string {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-}
-
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleTimeString([], {
     hour: "2-digit",
@@ -42,6 +35,7 @@ function fmtTime(iso: string): string {
 
 export function EmployeeDashboard({ user }: { user: SessionUser }) {
   const [records, setRecords] = useState<AttendanceRecord[] | null>(null);
+  const [today, setToday] = useState<string | null>(null);
   const [clock, setClock] = useState(() => new Date());
   const [description, setDescription] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -57,8 +51,12 @@ export function EmployeeDashboard({ user }: { user: SessionUser }) {
   const [locating, setLocating] = useState(false);
 
   const load = useCallback(async () => {
-    const mine = await api.get<AttendanceRecord[]>("/attendance/me");
+    const [mine, day] = await Promise.all([
+      api.get<AttendanceRecord[]>("/attendance/me"),
+      api.get<{ workDate: string }>("/attendance/today"),
+    ]);
     setRecords(mine);
+    setToday(day.workDate);
   }, []);
 
   useEffect(() => {
@@ -76,7 +74,6 @@ export function EmployeeDashboard({ user }: { user: SessionUser }) {
     };
   }, [photoUrl]);
 
-  const today = localToday();
   const todayRecord = useMemo(
     () => (records ?? []).find((r) => r.workDate === today) ?? null,
     [records, today],
